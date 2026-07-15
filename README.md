@@ -10,7 +10,7 @@ A Python package for annotating enhancers from epigenetic data using AI/ML model
 (Logistic Regression, XGBoost, CNN, and Type-2 Fuzzy Logic System). 
 The package runs as four steps 
 1- Pre-processing, 
-2- Model Training,
+2- Model Training (optional),
 3- Model Prediction,
 4- Enhancer merging
 all driven from a single command-line script, `EpiEnhancerAi.py`.
@@ -48,7 +48,7 @@ pip install numpy
 If you hit an `xgboost`/`scikit-learn` compatibility error (e.g. `AttributeError:'super' object has no attribute '__sklearn_tags__'`), upgrade xgboost:
 `pip install -U xgboost` (requires xgboost >= 2.1.3).
 
-### Required files alongside `Enhancer_annotation.py`
+### Required files alongside `EpiEnhancerAI.py`
 
 The Model Training step calls out to the model-specific scripts below, so make
 sure they sit in the same folder as `Enhancer_annotation.py`:
@@ -135,7 +135,7 @@ python3 Enhancer_annotation.py preprocessing \
 
 ---
 
-## 2. Model Training
+## 2. model training
 
 Trains a new model on your own data, or runs an existing trained model to
 annotate enhancers on new data. Supports four models: Logistic Regression
@@ -168,7 +168,7 @@ python3 Enhancer_annotation.py model_training \
 | `--output_dir`       | Yes                                                     | &mdash; | Directory where outputs (trained model, predictions, ROC curves, reports) will be written.        |
 
 ---
-## 4. Model prediction
+## 4. model prediction
 
 ### Running inference with an existing LR/XGBoost/CNN model
 
