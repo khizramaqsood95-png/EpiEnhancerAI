@@ -7,13 +7,13 @@ You can find the updated version of EpiEnhancerAI on GitHub: https://github.com/
 
 
 A Python package for annotating enhancers from epigenetic data using AI/ML models
-(Logistic Regression, XGBoost, CNN, and Type-2 Fuzzy Logic System). 
+(Logistic Regression, XGBoost, CNN, and type2-FLS). 
 The package runs as four steps 
 1- Pre-processing, 
 2- Model Training (optional),
 3- Model Prediction,
 4- Enhancer merging
-all driven from a single command-line script, `EpiEnhancerAi.py`.
+all driven from a single command-line script, `EpiEnhancerAI.py`.
 
 ---
 
@@ -69,10 +69,10 @@ The package consists of three steps, run in order:
    the feature matrix required to train the AI/ML models. Also splits the
    matrix into train / holdout (test) / unseen sets.
 2. Model Training takes the matrix from Pre-processing and trains
-   (or runs inference with) an AI/ML model: LR, XGBoost, CNN, or Type-2 FLS
+   (or runs inference with) an AI/ML model: LR, XGBoost, CNN, or type2-FLS
    (Fuzzy).
 3. Model Prediction: takes the matrix from Pre-processing and predicts
-   The enhancers using AI/ML models: LR, XGBoost, CNN, or Type-2 FLS
+   The enhancers using AI/ML models: LR, XGBoost, CNN, or type2-FLS
    (Fuzzy).
 4. Enhancer merging takes the annotated-enhancer output of Model
    Training and merges adjacent/nearby 100bp bins back into full-length
@@ -110,14 +110,14 @@ tracks to include, with three columns:
 
 python3 Enhancer_annotation.py preprocessing \
   --output_path /path/to/output_dir \
-  --input_file /path/to/Pre-processing_parameters.csv \
+  --input_file /path/to/input_files.csv \
   --chrom_sizes /path/to/hg38.chrom.sizes.txt \
   --normalisation min_max \
   --binsize 100
 
   python3 Enhancer_annotation.py preprocessing \
   --output_path /path/to/output_dir \
-  --input_file /path/to/Pre-processing_parameters.csv \
+  --input_file /path/to/input_files.csv \
   --chrom_sizes /path/to/hg38.chrom.sizes.txt \
   --normalisation quantile \
   --quantile_lower 0.01 \ 
@@ -148,7 +148,7 @@ python3 Enhancer_annotation.py preprocessing \
 
 Trains a new model on your own data, or runs an existing trained model to
 annotate enhancers on new data. Supports four models: Logistic Regression
-(`LR`/`LG`), XGBoost (`XGB`), CNN (`CNN`), and Type-2 Fuzzy Logic System
+(`LR`/`LG`), XGBoost (`XGB`), CNN (`CNN`), and type2-FLS
 (`FUZZY`).
 
 
@@ -188,7 +188,7 @@ python3 Enhancer_annotation.py model_prediction \
   --model_file /path/to/cnn_model.pth \
   --output_dir /path/to/output_dir
 
-### Running inference with the Fuzzy (Type-2 FLS) model
+### Running inference with the Fuzzy (type2-FLS) model
 
 The Fuzzy model uses a partition file and a rule file instead of a single
 model file:
