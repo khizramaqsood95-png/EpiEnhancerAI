@@ -51,7 +51,7 @@ If you hit an `xgboost`/`scikit-learn` compatibility error (e.g. `AttributeError
 ### Required files alongside `EpiEnhancerAI.py`
 
 The Model Training step calls out to the model-specific scripts below, so make
-sure they sit in the same folder as `Enhancer_annotation.py`:
+sure they sit in the same folder as `EpiEnhancerAI.py`:
 
 - `LogisticRegression.py`
 - `XGBoost.py`
@@ -80,10 +80,10 @@ The package consists of three steps, run in order:
 
 All four steps are run through the same script, choosing the step as the
 first argument (case-insensitive: `preprocessing`, `model_training`, `model_prediction`
-`enhancer_merging` all work):
+`assembly` all work):
 
 
-python3 Enhancer_annotation.py <step> [options]
+python3 EpiEnhancerAI.py <step> [options]
 
 
 ---
@@ -94,7 +94,7 @@ Reads a CSV listing which epigenetic feature/track files to process, tiles
 the genome using a chromosome-sizes file, builds the feature matrix, and
 writes train/holdout/unseen splits.
 
-### Features CSV (`--params_csv`)
+### Features CSV (`--input_file`)
 
 This is the only file-based input for this step. It lists the epigenetic
 tracks to include, with three columns:
@@ -108,19 +108,19 @@ tracks to include, with three columns:
 
 ### Command
 
-python3 Enhancer_annotation.py preprocessing \
+python3 EpiEnhancerAI.py preprocessing \
   --output_path /path/to/output_dir \
   --input_file /path/to/input_files.csv \
   --chrom_sizes /path/to/hg38.chrom.sizes.txt \
   --normalisation min_max \
   --binsize 100
 
-  python3 Enhancer_annotation.py preprocessing \
+  python3 EpiEnhancerAI.py preprocessing \
   --output_path /path/to/output_dir \
   --input_file /path/to/input_files.csv \
   --chrom_sizes /path/to/hg38.chrom.sizes.txt \
   --normalisation quantile \
-  --quantile_lower 0.01 \ 
+  --quantile_lower 0.01 \
   --quantile_upper 0.99 \
   --binsize 100
 
@@ -132,6 +132,8 @@ python3 Enhancer_annotation.py preprocessing \
 | `--input_file`       | Yes      | path                 | Features CSV described above (`Feature`, `path`, `type`).                  |
 | `--chrom_sizes`      | No       | `hg38.chrom.sizes.txt`    | Path to the chromosome sizes file.                                        |
 | `--normalisation`    | No       | `min_max`                 | Normalisation method: `min_max`, `quantile`, or `none`.                    |
+| `--quantile_lower`   | No       | `0.01`                     | Lower quantile bound. Only used when `--normalisation quantile` is selected. |
+| `--quantile_upper`   | No       | `0.99`                     | Upper quantile bound. Only used when `--normalisation quantile` is selected. |
 | `--binsize`          | No       | `100`                      | Genome tile bin size, in bp.                                              |
 
 ### Output
@@ -155,7 +157,7 @@ annotate enhancers on new data. Supports four models: Logistic Regression
 ### Training a model
 
 
-python3 Enhancer_annotation.py model_training \
+python3 EpiEnhancerAI.py model_training \
   --train_file /path/to/Train_input_NAs.csv \
   --test_file /path/to/Test_input_NAs.csv \
   --model_name LR \
@@ -166,24 +168,21 @@ python3 Enhancer_annotation.py model_training \
 
 ### Parameters
 
-| Flag                | Required                                             | Default | Description                                                                                     |
-|----------------------|-------------------------------------------------------|---------|---------------------------------------------------------------------------------------------------|
-| `--train_file`       | Only when `--mode Training`                              | &mdash; | Path to the training data CSV (output of Pre-processing).                                        |
-| `--test_file`        | Yes                                                     | &mdash; | Path to the test/inference data CSV.                                                              |
-| `--model_name`       | Yes                                                     | &mdash; | Model to run: `LR`/`LG` (Logistic Regression), `XGB` (XGBoost), `CNN`, or `FUZZY`.                 |
-| `--model_file`       | Only when `--mode` isn't `Training` and model isn't FUZZY | &mdash; | Path to a saved model file.                                                                        |
-| `--partition_file`   | Only when `--mode` isn't `Training` and model is FUZZY   | &mdash; | Path to the fuzzy partition file.                                                                 |
-| `--rule_file`        | Only when `--mode` isn't `Training` and model is FUZZY   | &mdash; | Path to the fuzzy rule file.                                                                       |
-| `--output_dir`       | Yes                                                     | &mdash; | Directory where outputs (trained model, predictions, ROC curves, reports) will be written.        |
+| Flag                | Required | Default | Description                                                                                     |
+|----------------------|:--------:|---------|---------------------------------------------------------------------------------------------------|
+| `--train_file`       | Yes      | &mdash; | Path to the training data CSV (output of Pre-processing).                                        |
+| `--test_file`        | Yes      | &mdash; | Path to the test/validation data CSV.                                                             |
+| `--model_name`       | Yes      | &mdash; | Model to train: `LR`/`LG` (Logistic Regression), `XGB` (XGBoost), `CNN`, or `FUZZY`.               |
+| `--output_dir`       | Yes      | &mdash; | Directory where outputs (trained model, predictions, ROC curves, reports) will be written.        |
 
 ---
-## 4. model prediction
+## 3. model prediction
 
 ### Running inference with an existing LR/XGBoost/CNN model
 
 
-python3 Enhancer_annotation.py model_prediction \
-  --test_file /path/to/Test_DMR_method_input_NAs.csv \
+python3 EpiEnhancerAI.py model_prediction \
+  --test_file /path/to/Test_bins_method_input_NAs.csv \
   --model_name CNN \
   --model_file /path/to/cnn_model.pth \
   --output_dir /path/to/output_dir
@@ -194,12 +193,23 @@ The Fuzzy model uses a partition file and a rule file instead of a single
 model file:
 
 
-python3 Enhancer_annotation.py model_prediction \
-  --test_file /path/to/Test_DMR_method_input_NAs.csv \
+python3 EpiEnhancerAI.py model_prediction \
+  --test_file /path/to/Test_bins_method_input_NAs.csv \
   --model_name FUZZY \
   --partition_file /path/to/Features_partitions.txt \
   --rule_file /path/to/Features_Rules_file.txt \
   --output_dir /path/to/output_dir
+
+### Parameters
+
+| Flag                | Required                          | Default | Description                                                                         |
+|----------------------|------------------------------------|---------|----------------------------------------------------------------------------------------|
+| `--test_file`        | Yes                                 | &mdash; | Path to the test/inference data CSV.                                                  |
+| `--model_name`       | Yes                                 | &mdash; | Model to run: `LR`/`LG` (Logistic Regression), `XGB` (XGBoost), `CNN`, or `FUZZY`.      |
+| `--model_file`       | Only when model isn't FUZZY          | &mdash; | Path to a saved model file.                                                            |
+| `--partition_file`   | Only when model is FUZZY             | &mdash; | Path to the fuzzy partition file.                                                      |
+| `--rule_file`        | Only when model is FUZZY             | &mdash; | Path to the fuzzy rule file.                                                           |
+| `--output_dir`       | Yes                                 | &mdash; | Directory where outputs will be written.                                              |
 
 
 
@@ -215,7 +225,7 @@ on the command line, and the confidence column is fixed to `Probabilities`.
 ### Command
 
 
-python3 Enhancer_annotation.py enhancer_merging \
+python3 EpiEnhancerAI.py assembly \
   --enhancer_annotation_csv /path/to/LR_predictions.csv \
   --output_path /path/to/output_dir \
   --threshold 0.8 \
@@ -227,7 +237,7 @@ python3 Enhancer_annotation.py enhancer_merging \
 
 | Flag                          | Required | Default | Description                                                               |
 |---------------------------------|:--------:|---------|------------------------------------------------------------------------------|
-| `--enhancer_annotation_csv`      | Yes      | path | Path to the annotated-enhancer CSV (output of Model Training), must contain a `Probabilities` column. |
+| `--enhancer_annotation_csv`      | Yes      | path | Path to the annotated-enhancer CSV (output of model training), must contain a `Probabilities` column. |
 | `--output_path`                  | Yes      | path | Directory where output files will be written.                             |
 | `--threshold`                    | No       | `0.8`    | Probability threshold above which a bin is considered part of an enhancer.|
 | `--gap`                           | No       | `500`    | Maximum gap (bp) allowed when merging nearby bins into one enhancer domain.|
