@@ -79,7 +79,7 @@ The package consists of three steps, run in order:
    enhancer regions.
 
 All four steps are run through the same script, choosing the step as the
-first argument (case-insensitive: `preprocessing`, `Model_training`, `Model_prediction`
+first argument (case-insensitive: `preprocessing`, `model_training`, `model_prediction`
 `enhancer_merging` all work):
 
 
@@ -129,8 +129,8 @@ python3 Enhancer_annotation.py preprocessing \
 
 - Feature matrix CSVs (tiled, normalised, and NA-masked versions), tiled by
   100bp bins across the genome.
-- `DMR_method_input_500k.csv` (training set), `DMR_method_holdout_500k.csv`
-  (test set), and `DMR_method_unseen_500k.csv` (unseen/leftover genome bins),
+- `FeatureMatrix_input_500k.csv` (training set), `FeatureMatrix_holdout_500k.csv`
+  (test set), and `FeatureMatrix_unseen_500k.csv` (unseen/leftover genome bins),
   produced automatically from the feature matrix.
 
 ---
@@ -147,8 +147,8 @@ annotate enhancers on new data. Supports four models: Logistic Regression
 
 
 python3 Enhancer_annotation.py model_training \
-  --train_file /path/to/Train_DMR_method_input_NAs.csv \
-  --test_file /path/to/Test_DMR_method_input_NAs.csv \
+  --train_file /path/to/Train_input_NAs.csv \
+  --test_file /path/to/Test_input_NAs.csv \
   --model_name LR \
   --output_dir /path/to/output_dir
 
@@ -238,5 +238,5 @@ python3 Enhancer_annotation.py enhancer_merging \
   the four models to train/run.
 - On small sample data, each step typically completes in under 15 minutes on
   a local system.
-- Subcommand names (`preprocessing`, `model_training`, `assembly`) are
+- Subcommand names (`preprocessing`, `model_training`, `model_prediction`,`enhancer_merging`) are
   case-insensitive.
