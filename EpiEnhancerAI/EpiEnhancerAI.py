@@ -5,7 +5,7 @@ EpiEnhancerAI.py
 Single entry point for the enhancer-annotation pipeline. Pick which stage to
 run with the first command-line argument:
 
-    python3 EpiEnhancerAI.py preprocessing     --output_path ... --input_file ... [--normalisation min_max] [--chrom_sizes hg38.chrom.sizes.txt] [--binsize 100]
+    python3 EpiEnhancerAI.py preprocessing     --output_path ... --input_file ... [--normalisation min_max] [--chrom_sizes hg38.chrom.sizes.txt] [--binsize 100] [--quantile_lower 0.01 --quantile_upper 0.99]
     python3 EpiEnhancerAI.py model_training    --train_file ... --test_file ... --model_name LR --output_dir ...
     python3 EpiEnhancerAI.py model_prediction  --test_file ... --model_name LR --model_file ... --output_dir ...
     python3 EpiEnhancerAI.py assembly          --enhancer_annotation_csv ... --output_path ... [--threshold 0.8] [--gap 500] [--bin_size 100]
@@ -262,6 +262,8 @@ def build_genome_tiled(
     chrom_sizes_file,
     tracks,
     binsize=100,
+    quantile_lower=0.01,
+    quantile_upper=0.99,
 ):
 
     print("Pre-processing...")
@@ -312,15 +314,18 @@ def build_genome_tiled(
         filename = output_path / "FeatureMatrix_norm_tiled_NA.csv"
 
     elif normalisation == "quantile":
-        genome_df[non_meta] = normalize_quantile(genome_df[non_meta])
-        genome_df.to_csv(output_path / "FeatureMatrix_quantile_0.01_0.99_tiled.csv", index=False, na_rep="NA")
+        genome_df[non_meta] = normalize_quantile(genome_df[non_meta], q_low=quantile_lower, q_high=quantile_upper)
+        genome_df.to_csv(
+            output_path / f"FeatureMatrix_quantile_{quantile_lower}_{quantile_upper}_tiled.csv",
+            index=False, na_rep="NA",
+        )
 
         na_df = genome_df.copy()
         if input_col_names:
             na_df[input_col_names] = na_df[input_col_names].apply(zero_to_na)
-        na_df.to_csv(output_path / "FeatureMatrix_quantile_0.01_0.99_tiled_NA.csv", index=False, na_rep="NA")
+        na_df.to_csv(output_path / "FeatureMatrix_quantile_{quantile_lower}_{quantile_upper}_tiled_NA.csv", index=False, na_rep="NA")
         print("\nData has been saved in quantile file!")
-        filename = output_path / "FeatureMatrix_quantile_0.01_0.99_tiled_NA.csv"
+        filename = output_path / "FeatureMatrix_quantile_{quantile_lower}_{quantile_upper}_tiled_NA.csv"
 
     else:
         genome_df.to_csv(output_path / "FeatureMatrix_tiled.csv", index=False, na_rep="NA")
@@ -464,6 +469,20 @@ def read_preprocessing_params(csv_path):
 
 
 def run_preprocessing(args):
+    normalisation = args.normalisation.lower()
+
+    if normalisation == "quantile":
+        if not (0 <= args.quantile_lower < args.quantile_upper <= 1):
+            raise ValueError(
+                f"--quantile_lower ({args.quantile_lower}) and --quantile_upper "
+                f"({args.quantile_upper}) must satisfy 0 <= lower < upper <= 1."
+            )
+    elif args.quantile_lower != 0.01 or args.quantile_upper != 0.99:
+        print(
+            "Warning: --quantile_lower/--quantile_upper only apply when "
+            "--normalisation quantile is selected; ignoring."
+        )
+
     tracks = read_preprocessing_params(args.params_csv)
 
     genome_tiled, tiled_csv_path, output_path = build_genome_tiled(
@@ -472,6 +491,8 @@ def run_preprocessing(args):
         chrom_sizes_file=args.chrom_sizes_file,
         tracks=tracks,
         binsize=args.binsize,
+        quantile_lower=args.quantile_lower,
+        quantile_upper=args.quantile_upper,
     )
     print("Splitting data into training, testing and unseen files...")
     build_stratified_samples(tiled_csv_path, output_path)
@@ -485,7 +506,8 @@ def run_preprocessing(args):
 def choose_model(model_name):
     """Map the --model_name value to the actual training/inference script filename."""
     mapping = {
-        "LR": "LogisticRegression.py",  
+        "LG": "LogisticRegression.py",
+        "LR": "LogisticRegression.py",   # alias
         "XGB": "XGBoost.py",
         "CNN": "CNN.py",
         "FUZZY": "Fuzzy.py",
@@ -504,7 +526,7 @@ def run_model_training(args):
     do_train = True
 
     script_name = choose_model(args.model_name)
-   
+    
     no_training_flag = script_name.lower() in ("fuzzy.py", "cnn.py", "xgboost.py")
 
     if not args.train_file:
@@ -543,12 +565,11 @@ def run_model_training(args):
 # ========================== MODEL PREDICTION STAGE ==========================
 # =============================================================================
 
-
 def choose_prediction_model(model_name):
     """Map the --model_name value to the actual *_pred.py inference script filename."""
     mapping = {
         "LG": "LogisticRegression_pred.py",
-        "LR": "LogisticRegression_pred.py",   
+        "LR": "LogisticRegression_pred.py",   # alias
         "XGB": "XGBoost_pred.py",
         "CNN": "CNN_pred.py",
         "FUZZY": "Fuzzy_pred.py",
@@ -592,7 +613,7 @@ def run_model_prediction(args):
     try:
         base_dir = Path(__file__).resolve().parent
     except NameError:
-        
+        # Running in an interactive environment without __file__
         base_dir = Path.cwd()
     script_path = base_dir / script_name
 
@@ -617,7 +638,7 @@ def run_model_prediction(args):
 # =============================== ASSEMBLY STAGE =============================
 # =============================================================================
 
-# The confidence/probability column is fixed.
+# The confidence/probability column is fixed and not user-configurable.
 CONF_COL = "Probabilities"
 
 
@@ -684,9 +705,7 @@ def assign_domain_ids(regions_df, combined_intervals):
     return domain_ids
 
 
-# ---------------------------------------------------------------------------
-# Equivalent of .p_glist_creation()
-# ---------------------------------------------------------------------------
+
 def p_glist_creation(chrom, df, threshold, gap, conf_col=CONF_COL, binsize=100):
 
     x_chrom = df[df["seqnames"] == chrom].sort_values("start").reset_index(drop=True)
@@ -714,9 +733,7 @@ def p_glist_creation(chrom, df, threshold, gap, conf_col=CONF_COL, binsize=100):
     return groups
 
 
-# ---------------------------------------------------------------------------
-# Equivalent of H9_glist.R's main loop
-# ---------------------------------------------------------------------------
+
 def build_glist(
     tiled_csv_path,
     output_path,
@@ -749,7 +766,7 @@ def build_glist(
     for block in reversed(per_chrom_blocks):
         glist.extend(block)
 
-   
+    
     with open(output_path / f"glist_{threshold}_{gap}bp.pkl", "wb") as f:
         pickle.dump(glist, f)
 
@@ -768,7 +785,7 @@ def build_glist(
     return glist
 
 
-# ---------------------------------------------------------------------------
+
 def conf_perc_avg_regions(source_df, target_intervals, binsize):
 
     seqname = source_df["seqnames"].iloc[0] if len(source_df) else None
@@ -787,9 +804,7 @@ def conf_perc_avg_regions(source_df, target_intervals, binsize):
     return pd.DataFrame(rows, columns=["seqnames", "start", "end", "width", "sumconfperc1", "avgconfperc1"])
 
 
-# ---------------------------------------------------------------------------
-# Equivalent of Region_Growth()
-# ---------------------------------------------------------------------------
+
 def region_growth(domain_df, threshold, max_gap=500, binsize=100):
 
     x = domain_df.sort_values("start").reset_index(drop=True)
@@ -856,9 +871,7 @@ def read_glist(path):
     return glist
 
 
-# ---------------------------------------------------------------------------
-# Equivalent of Enhancers_Assembly.R
-# ---------------------------------------------------------------------------
+
 def assemble_enhancers(
     glist_path,
     output_path,
@@ -958,6 +971,14 @@ def build_parser():
         help="Normalisation method to apply (default: min_max).",
     )
     pp.add_argument(
+        "--quantile_lower", type=float, default=0.01,
+        help="Lower quantile bound, only used when --normalisation quantile is selected (default: 0.01).",
+    )
+    pp.add_argument(
+        "--quantile_upper", type=float, default=0.99,
+        help="Upper quantile bound, only used when --normalisation quantile is selected (default: 0.99).",
+    )
+    pp.add_argument(
         "--chrom_sizes", dest="chrom_sizes_file", default="hg38.chrom.sizes.txt",
         help="Path to the chromosome sizes file (default: hg38.chrom.sizes.txt).",
     )
@@ -1007,7 +1028,7 @@ def build_parser():
     )
     mp.add_argument("--output_dir", required=True, help="Directory for outputs.")
 
-    # ---- merging ----
+    # ---- assembly ----
     asm = subparsers.add_parser(
         "assembly",
         help="Build enhancer domain lists and assemble merged enhancer regions from a tiled annotation CSV.",
@@ -1032,7 +1053,7 @@ def build_parser():
 
 
 def main():
-    # Allow the step name to be given in any case ("Model_training", "enhancer merging", etc.)
+    # Allow the step name to be given in any case ("Model_training", "ASSEMBLY", etc.)
     if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
         sys.argv[1] = sys.argv[1].lower()
 
@@ -1045,7 +1066,7 @@ def main():
         run_model_training(args)
     elif args.step == "model_prediction":
         run_model_prediction(args)
-    elif args.step == "assembly":
+    elif args.step == "enhancer_merging":
         run_assembly(args)
 
 
