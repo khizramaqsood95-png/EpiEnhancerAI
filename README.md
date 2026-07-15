@@ -115,6 +115,15 @@ python3 Enhancer_annotation.py preprocessing \
   --normalisation min_max \
   --binsize 100
 
+  python3 Enhancer_annotation.py preprocessing \
+  --output_path /path/to/output_dir \
+  --input_file /path/to/Pre-processing_parameters.csv \
+  --chrom_sizes /path/to/hg38.chrom.sizes.txt \
+  --normalisation quantile \
+  --quantile_lower 0.01 \ 
+  --quantile_upper 0.99 \
+  --binsize 100
+
 ### Parameters
 
 | Flag               | Required | Default                  | Description                                                              |
