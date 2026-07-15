@@ -1,7 +1,0 @@
-Feature,path,type
-H3K27ac,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/ChIP/H3K27ac/ENCFF494WCA.bigWig,Input
-H3K18ac,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/ChIP/H3K27ac/ENCFF494WCA.bigWig,Input
-ATAC,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/ATAC/ENCFF494WCA_2.bigWig,Input
-CpG,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/Bisulfite/CPG/ENCFF494WCA_1.bigWig,Input
-DNAse,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/DNAse/ENCFF672DJH.bigWig,Input
-STARR,/Users/hmz453/Documents/UOE/PhD_2022/Research_Article/Human_ESC/Revision_May26/Enhancer_Annotation_Package/STARR/ChIP-STARR-seq_enhancers_primed.bed,Label
